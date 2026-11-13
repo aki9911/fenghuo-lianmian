@@ -42,6 +42,8 @@ func sync_from_state(agent: Dictionary, teleport: bool = false) -> void:
 		visual.rotation.y = atan2(-motion.x, -motion.y)
 
 func resolve_motion(from: Vector2, to: Vector2) -> Vector2:
+	if state.get("position_locked", false):
+		return Vector2(global_position.x, global_position.z) if is_inside_tree() else from
 	if not is_inside_tree():
 		position.x = to.x
 		position.z = to.y
@@ -87,6 +89,13 @@ static func _damage_multiplier(agent: Dictionary) -> float:
 
 static func _ally_step(model, agent: Dictionary, delta: float) -> void:
 	var speed: float = _speed(model, agent)
+	agent.erase("pursuit_anchor")
+	agent.erase("pursuit_radius")
+	var reach: float = model._c("ranged_range", 10) if _ranged(agent) or model.phase == 1 else model._c("melee_range", 1.8)
+	if model.army_holding:
+		var close: Dictionary = {} if model.pursuit_stopped else model._nearest_enemy_of(agent, reach)
+		if not close.is_empty(): _ally_attack(model, agent, close, reach)
+		return
 	if model.phase == 3 and model._all_groups_finished():
 		# The last covering troops use the same open street as residents rather
 		# than a straight line through the workshop and occupied houses.
@@ -114,29 +123,37 @@ static func _ally_step(model, agent: Dictionary, delta: float) -> void:
 			facing = Vector2.UP
 		offset = Vector2(-facing.y, facing.x) * offset.x - facing * offset.y
 	anchor += offset
-	var reach: float = model._c("ranged_range", 10) if _ranged(agent) or model.phase == 1 else model._c("melee_range", 1.8)
-	var leash: float = maxf(3.0, model._c("melee_range", 1.8) * 2.0)
+	var leash: float = maxf(0.1, model._c("ally_pursuit_radius", 8))
+	if order.mode in ["guard", "follow"]:
+		agent["pursuit_anchor"] = anchor
+		agent["pursuit_radius"] = leash
 	# Follow first when separated from the commander. Nearby threats never pull
 	# a squad indefinitely away from its current moving formation.
-	if order.mode == "follow" and agent.pos.distance_to(anchor) > leash:
+	if order.mode in ["follow", "guard"] and agent.pos.distance_to(anchor) > leash:
 		model._move(agent, anchor, speed * delta)
 		return
 	var target: Dictionary = {} if model.pursuit_stopped else model._nearest_enemy_of(agent, maxf(reach, leash))
 	if not target.is_empty():
 		if agent.pos.distance_to(target.pos) <= reach:
-			if float(agent.cooldown) <= 0 and model._can_strike(agent.pos, target.pos, reach):
-				var equipment: float = 1.0 if agent.get("equipped", false) else model._c("unequipped_damage_factor", 0.45)
-				var food: float = 1.0 if model.rationed else model._c("unfed_damage_factor", 0.8)
-				model._damage(target, model._c("ally_damage", 9) * equipment * food * _damage_multiplier(agent))
-				agent["cooldown"] = model._c("ally_attack_interval", 2.4)
+			_ally_attack(model, agent, target, reach)
 			return
 		if order.mode != "hold" and model.phase != 1 and target.pos.distance_to(anchor) <= leash:
 			model._move(agent, target.pos, speed * delta)
 			return
 	model._move(agent, anchor, speed * delta)
 
+static func _ally_attack(model, agent: Dictionary, target: Dictionary, reach: float) -> void:
+	if float(agent.cooldown) > 0 or not model._can_strike(agent.pos, target.pos, reach): return
+	var equipment: float = 1.0 if agent.get("equipped", false) else model._c("unequipped_damage_factor", 0.45)
+	var food: float = 1.0 if model.rationed else model._c("unfed_damage_factor", 0.8)
+	model._damage(target, model._c("ally_damage", 9) * equipment * food * _damage_multiplier(agent))
+	agent["cooldown"] = model._c("ally_attack_interval", 2.4)
+
 static func _enemy_step(model, agent: Dictionary, delta: float) -> void:
 	if model.morale <= 0:
+		return
+	if model.phase == 0:
+		_raid_guard_step(model, agent, delta)
 		return
 	var speed: float = _speed(model, agent)
 	var reach: float = model._c("enemy_ranged_range", 7.5) if _ranged(agent) else model._c("melee_range", 1.8)
@@ -179,3 +196,37 @@ static func _enemy_step(model, agent: Dictionary, delta: float) -> void:
 				agent["cooldown"] = model._c("civilian_attack_interval", 7)
 				return
 	model._move(agent, destination, speed * delta)
+
+static func _raid_guard_step(model, agent: Dictionary, delta: float) -> void:
+	var center: Vector2 = model.SUPPLY_POSITION
+	var guard_radius: float = model._c("raid_guard_radius", 10)
+	var detection: float = model._c("raid_detection_radius", 8)
+	var target: Dictionary = {}
+	var nearest: float = detection
+	for other in model.agents:
+		if not other.alive or other.team != "ally" or other.pos.distance_to(center) > guard_radius:
+			continue
+		var distance: float = agent.pos.distance_to(other.pos)
+		if distance <= nearest:
+			nearest = distance
+			target = other
+	var player_near: bool = model.player_hp > 0 and model.player_pos.distance_to(center) <= guard_radius and agent.pos.distance_to(model.player_pos) <= nearest
+	var reach: float = model._c("enemy_ranged_range", 7.5) if _ranged(agent) else model._c("melee_range", 1.8)
+	if player_near or not target.is_empty():
+		var position: Vector2 = model.player_pos if player_near else target.pos
+		if agent.pos.distance_to(position) <= reach:
+			if float(agent.cooldown) <= 0:
+				var damage: float = model._c("enemy_damage", 5.5) * _damage_multiplier(agent)
+				if player_near: model.player_hp = maxf(0, model.player_hp - damage)
+				else: model._damage(target, damage)
+				agent["cooldown"] = model._c("enemy_attack_interval", 2.8)
+		else:
+			model._move(agent, position, _speed(model, agent) * delta)
+		return
+	var waypoint: int = int(agent.get("patrol_waypoint", 0))
+	var destination: Vector2 = model.raid_patrol_position(int(agent.id), waypoint)
+	if agent.pos.distance_to(destination) < 0.6:
+		waypoint += 1
+		agent["patrol_waypoint"] = waypoint
+		destination = model.raid_patrol_position(int(agent.id), waypoint)
+	model._move(agent, destination, _speed(model, agent) * delta)

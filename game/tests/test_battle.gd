@@ -103,7 +103,7 @@ func _morale_and_phases() -> void:
 func _population_and_refresh() -> void:
 	var battle = fixture()
 	battle._spawn_enemies(1000)
-	expect(battle.enemy_count() == 30 and battle.ally_count() == 30, "raid caps30/30")
+	expect(battle.enemy_count() == 100 and battle.ally_count() == 30, "raid caps100/30 after reinforcements")
 	battle.start_combat()
 	var victim: Dictionary = {}
 	for agent in battle.agents:
@@ -116,7 +116,7 @@ func _population_and_refresh() -> void:
 	battle._damage(victim, 10000)
 	expect(battle.kills == 1, "duplicate damage does not double count kill")
 	battle._spawn_enemies(1000)
-	expect(battle.enemy_count() == 30 and battle.morale == morale, "refill only vacant slots without restoring morale")
+	expect(battle.enemy_count() == 100 and battle.morale == morale, "spawn allocator respects vacant slots without restoring morale")
 	var ids: Dictionary = {}
 	for agent in battle.agents:
 		if agent.alive:
@@ -197,7 +197,7 @@ func _capture_and_paths() -> void:
 	battle.point_owners = [false, true, true]
 	battle._update_points(1)
 	expect(battle.phase == 3 and battle.mode == "deploy", "simultaneous three-point ownership triggers evacuation")
-	var walker: Dictionary = {"pos": Vector2(20, -2)}
+	var walker: Dictionary = {"team": "enemy", "pos": Vector2(20, -2)}
 	battle._move(walker, Vector2(20, 10), 1)
 	expect(walker.pos.y < 0, "offscreen unit cannot pass intact side wall")
 

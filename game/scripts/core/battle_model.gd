@@ -32,6 +32,10 @@ var escaped: int = 0
 var evac_groups: Array = []
 var formations: Array = []
 var squad_orders: Array = []
+var army_holding: bool = false
+var raid_elapsed: float = 0.0
+var raid_pending_reinforcements: int = 0
+var _raid_wave_index: int = 0
 var ballista_count: int = 0
 var front_capture: float = 0.0
 var point_owners: Array = [false, false, false]
@@ -94,7 +98,7 @@ func begin_battle() -> void:
 			_baseline[int(person.id)] = str(person.origin)
 	_default_formations()
 	_sync_allies()
-	_spawn_enemies(int(_c("raid_initial_enemies", 24)))
+	_spawn_enemies(int(_c("raid_initial_enemies", 30)))
 	_emit("begin", {"baseline": _baseline.size()})
 
 func _obliterate_transients() -> void:
@@ -116,6 +120,10 @@ func _obliterate_transients() -> void:
 	_had_escort = false
 	_escort_wiped = false
 	pursuit_stopped = false
+	army_holding = false
+	raid_elapsed = 0.0
+	raid_pending_reinforcements = 0
+	_raid_wave_index = 0
 
 func _default_formations() -> void:
 	match phase:
@@ -125,7 +133,7 @@ func _default_formations() -> void:
 		3: formations = [Vector2(-10, 3), Vector2(-5, 3), Vector2(0, 3), Vector2(5, 3), Vector2(10, 3)]
 	squad_orders.clear()
 	for anchor in formations:
-		squad_orders.append({"mode": "hold", "target": anchor})
+		squad_orders.append({"mode": "guard", "target": anchor})
 
 func place_squad(slot: int, pos: Vector2) -> bool:
 	if mode != "deploy" or slot < 0 or slot >= formations.size() or not pos.is_finite():
@@ -133,17 +141,34 @@ func place_squad(slot: int, pos: Vector2) -> bool:
 	pos.x = clampf(pos.x, -22, 22)
 	pos.y = clampf(pos.y, -15 if phase == 0 else 1.8, 23)
 	formations[slot] = pos
-	squad_orders[slot] = {"mode": "hold", "target": pos}
+	squad_orders[slot] = {"mode": "guard", "target": pos}
 	for agent in agents:
 		if agent.alive and agent.team == "ally" and int(agent.formation) == slot:
 			# Deployment is an explicit teleport; combat motion uses the resolver.
 			agent["pos"] = pos + agent.get("formation_offset", Vector2.ZERO)
+			agent["position_locked"] = army_holding
+			if army_holding: agent["hold_position"] = agent.pos
+	return true
+
+func issue_all_order(order: String) -> bool:
+	if mode != "combat" or not order in ["hold", "guard"]:
+		return false
+	army_holding = order == "hold"
+	for agent in agents:
+		if agent.team == "ally" and agent.alive:
+			agent["position_locked"] = army_holding
+			if army_holding:
+				agent["hold_position"] = agent.pos
+			else:
+				agent.erase("hold_position")
+	# Hold overlays the existing squad orders. Release resumes those orders;
+	# it must not silently replace a follow/advance command with a new guard.
 	return true
 
 func issue_order(slot: int, order: String, target: Vector2 = Vector2.ZERO) -> bool:
-	if mode != "combat" or slot < 0 or slot >= squad_orders.size() or not order in ["follow", "hold", "advance"] or not target.is_finite():
+	if mode != "combat" or army_holding or slot < 0 or slot >= squad_orders.size() or not order in ["follow", "hold", "guard", "advance"] or not target.is_finite():
 		return false
-	if order == "hold" and target == Vector2.ZERO:
+	if order in ["hold", "guard"] and target == Vector2.ZERO:
 		var total: Vector2 = Vector2.ZERO
 		var count: int = 0
 		for agent in agents:
@@ -250,6 +275,7 @@ func advance_phase() -> void:
 	if phase == 2:
 		town.facilities["street"] = 0.0
 	phase += 1
+	raid_pending_reinforcements = 0
 	mode = "deploy"
 	_accumulator = 0.0
 	_spawn_timer = 0.0
@@ -294,11 +320,14 @@ func _simulate(delta: float) -> void:
 	_supply_timer = maxf(0, _supply_timer - delta)
 	_ballista_timer = maxf(0, _ballista_timer - delta)
 	if morale > 0:
-		_spawn_timer += delta
-		var interval: float = maxf(0.1, _g("raid_spawn_interval", 8) if phase == 0 else _g("battle_spawn_interval", 6))
-		while _spawn_timer >= interval:
-			_spawn_timer -= interval
-			_spawn_enemies(int(_g("raid_spawn_batch", 5) if phase == 0 else _g("battle_spawn_batch", 8)))
+		if phase == 0:
+			_tick_raid_reinforcements(delta)
+		else:
+			_spawn_timer += delta
+			var interval: float = maxf(0.1, _g("battle_spawn_interval", 6))
+			while _spawn_timer >= interval:
+				_spawn_timer -= interval
+				_spawn_enemies(int(_g("battle_spawn_batch", 8)))
 		_update_agents(delta)
 	else:
 		# Routing enemies cease combat, but escorts still reach the evacuation gate.
@@ -308,9 +337,7 @@ func _simulate(delta: float) -> void:
 	# Evaluate morale before a breach, so zero morale wins simultaneous gate damage.
 	if _evaluate():
 		return
-	if phase == 0:
-		_update_front(delta)
-	elif phase == 1 and gate_hp <= 0:
+	if phase == 1 and gate_hp <= 0:
 		advance_phase()
 	elif phase == 2:
 		_update_points(delta)
@@ -341,6 +368,8 @@ func _separate_agents(delta: float) -> void:
 			continue
 		var cell: Vector2i = Vector2i(floori(agent.pos.x), floori(agent.pos.y))
 		var separation: Vector2 = Vector2.ZERO
+		if army_holding and agent.team == "ally":
+			continue
 		for x in range(-1, 2):
 			for y in range(-1, 2):
 				for other in buckets.get(cell + Vector2i(x, y), []):
@@ -377,6 +406,8 @@ func _can_strike(from: Vector2, to: Vector2, reach: float) -> bool:
 	return not (from.y * to.y < 0 and (absf(from.x) > 2.5 or absf(to.x) > 2.5))
 
 func _move(agent: Dictionary, destination: Vector2, distance: float) -> void:
+	if army_holding and agent.team == "ally" and mode == "combat":
+		return
 	var pos: Vector2 = agent.pos
 	# Crossing the main wall uses the central gate corridor; no offscreen shortcuts.
 	if phase > 0 and pos.y < 0 and destination.y > 0:
@@ -394,6 +425,17 @@ func _move(agent: Dictionary, destination: Vector2, distance: float) -> void:
 		else:
 			destination = Vector2(0, -2)
 	var desired: Vector2 = pos.move_toward(destination, distance)
+	if agent.team == "ally" and agent.has("pursuit_anchor"):
+		var anchor: Vector2 = agent.pursuit_anchor
+		var radius: float = float(agent.pursuit_radius)
+		if pos.distance_to(anchor) <= radius + 0.000001:
+			desired = anchor + (desired - anchor).limit_length(radius)
+		elif desired.distance_to(anchor) > pos.distance_to(anchor):
+			return
+	if phase == 0 and agent.team == "enemy":
+		desired = SUPPLY_POSITION + (desired - SUPPLY_POSITION).limit_length(_c("raid_guard_radius", 10))
+		desired.x = clampf(desired.x, -23, 23)
+		desired.y = clampf(desired.y, -26, -7)
 	agent["pos"] = _resolve_position(agent, desired)
 
 func _resolve_position(agent: Dictionary, desired: Vector2) -> Vector2:
@@ -403,16 +445,74 @@ func _resolve_position(agent: Dictionary, desired: Vector2) -> Vector2:
 			return resolved
 	return desired
 
-func _spawn_enemies(requested: int) -> void:
-	if morale <= 0 or mode == "result":
+func raid_next_reinforcement_in() -> float:
+	if phase != 0 or mode == "result" or morale <= 0: return -1.0
+	return maxf(0, _c("raid_reinforcement_start", 180) + _raid_wave_index * _c("raid_reinforcement_interval", 60) - raid_elapsed)
+
+func raid_next_reinforcement_count() -> int:
+	if phase != 0 or mode == "result" or morale <= 0: return 0
+	var keys: Array = ["raid_wave_first", "raid_wave_second", "raid_wave_third"]
+	var defaults: Array = [10, 10, 15]
+	return int(_c(keys[_raid_wave_index], defaults[_raid_wave_index])) if _raid_wave_index < 3 else int(_c("raid_wave_repeat", 20))
+
+func _tick_raid_reinforcements(delta: float) -> void:
+	if phase != 0 or mode != "combat" or morale <= 0 or delta < 0:
 		return
-	var cap: int = int(_g("raid_enemy_cap", 30) if phase == 0 else _g("battle_enemy_cap", 100))
+	raid_elapsed += delta
+	var interval: float = maxf(0.1, _c("raid_reinforcement_interval", 60))
+	while raid_elapsed + 0.0000001 >= _c("raid_reinforcement_start", 180) + _raid_wave_index * interval:
+		var amount: int = raid_next_reinforcement_count()
+		raid_pending_reinforcements += amount
+		_emit("raid_reinforcement_%d" % _raid_wave_index, {"count": amount})
+		_raid_wave_index += 1
+	# Overflow stays in a prototype waiting queue. It never creates morale.
+	if raid_pending_reinforcements > 0:
+		raid_pending_reinforcements -= _spawn_enemies(raid_pending_reinforcements)
+
+func raid_patrol_position(agent_id: int, waypoint: int) -> Vector2:
+	var angle: float = float(agent_id) * 2.399963 + waypoint * 1.047198
+	var radius: float = _c("raid_patrol_radius", 6) * (0.45 + float(agent_id % 5) * 0.12)
+	var point: Vector2 = SUPPLY_POSITION + Vector2(cos(angle), sin(angle)) * radius
+	return Vector2(clampf(point.x, -23, 23), clampf(point.y, -26, -7))
+
+func _spawn_enemies(requested: int) -> int:
+	if morale <= 0 or mode == "result":
+		return 0
+	var cap: int = int(_g("raid_enemy_cap", 100) if phase == 0 else _g("battle_enemy_cap", 100))
 	var available: int = maxi(0, cap - enemy_count())
+	var spawned: int = 0
+	var initial_raid: bool = phase == 0 and mode == "deploy" and enemy_count() == 0 and raid_elapsed == 0
 	# One authoritative synchronous allocator owns all spawn points; no pending slots.
 	for index in range(mini(requested, available)):
-		var id: int = _allocate_id()
+		var id: int = _next_id
 		var spawn: Vector2 = Vector2((id % 13 - 6) * 1.7, -24 - float(id % 3) * 0.6)
+		if phase == 0:
+			spawn = raid_patrol_position(id, 0) if initial_raid else _raid_entry_position(id)
+			if spawn == Vector2.INF: break
+		_allocate_id()
 		agents.append({"id": id, "team": "enemy", "pos": spawn, "hp": _c("enemy_hp", 90), "max_hp": _c("enemy_hp", 90), "kind": "archer" if id % 5 == 0 else "raider", "soldier_id": -1, "alive": true, "cooldown": float(id % 8) * 0.2})
+		spawned += 1
+	return spawned
+
+func _raid_entry_position(seed: int) -> Vector2:
+	# Search the outer camp perimeter, not existing patrol positions. If crowded,
+	# the wave stays queued rather than spawning on the commander or another NPC.
+	for attempt in range(192):
+		var angle: float = float(seed + attempt) * 2.399963
+		var radius: float = _c("raid_guard_radius", 10) * (0.70 + float(attempt % 3) * 0.10)
+		var candidate: Vector2 = SUPPLY_POSITION + Vector2(cos(angle), sin(angle)) * radius
+		if candidate.x > 23 or candidate.x < -23 or candidate.y < -26 or candidate.y > -7:
+			continue
+		# Existing north-west supply tent occupies this corner of the camp.
+		if candidate.distance_to(Vector2(8, -23)) < 3.0 or candidate.distance_to(player_pos) < 3.5:
+			continue
+		var occupied: bool = false
+		for agent in agents:
+			if agent.alive and agent.pos.distance_squared_to(candidate) < 0.85 * 0.85:
+				occupied = true
+				break
+		if not occupied: return candidate
+	return Vector2.INF
 
 func _allocate_id() -> int:
 	var id: int = _next_id
@@ -689,6 +789,7 @@ func _finish(held: bool, player_escaped: bool) -> void:
 	if mode == "result":
 		return
 	mode = "result"
+	raid_pending_reinforcements = 0
 	for agent in agents:
 		if agent.team == "ally" and agent.alive and float(agent.hp) < float(agent.max_hp) * 0.5:
 			var person: Dictionary = _person(int(agent.soldier_id))

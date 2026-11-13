@@ -136,9 +136,9 @@ func _movement_hook() -> void:
 	model.tick(0.1)
 	expect(civilian_calls > 0, "evacuation authoritative movement also uses collision resolver")
 	model.movement_resolver = Callable()
-	ally.pos = Vector2(0, 10)
-	model._move(ally, Vector2(5, 10), 5)
-	expect(ally.pos == Vector2(5, 10), "headless simulation remains available without bodies")
+	var walker: Dictionary = {"team": "enemy", "pos": Vector2(0, 10)}
+	model._move(walker, Vector2(5, 10), 5)
+	expect(walker.pos == Vector2(5, 10), "headless simulation remains available without bodies")
 
 func _reinforcement_slots() -> void:
 	var model = fixture()
@@ -209,6 +209,10 @@ func _physical_collision() -> void:
 	await physics_frame
 	expect(actor.collision_layer == 2 and actor.collision_mask == 3, "all characters collide with environment and characters")
 	expect(agent.npc_tuning.combat_style == 2 and agent.npc_tuning.speed_multiplier == 1.5, "Inspector properties bind into shared simulation")
+	agent["position_locked"] = true
+	var held: Vector2 = actor.resolve_motion(Vector2.ZERO, Vector2(1, 0))
+	expect(held == Vector2.ZERO and actor.global_position.x == 0, "shared physical controller preserves held actor position")
+	agent["position_locked"] = false
 	var stopped: Vector2 = actor.resolve_motion(Vector2.ZERO, Vector2(5, 0))
 	expect(stopped.x < 1.5 and stopped.x > 1.0, "real capsule blocked by static wall")
 	agent.pos = Vector2.ZERO

@@ -1,9 +1,7 @@
 {
-  "config_version": "0.3-prototype.1",
+  "config_version": "0.6-prototype.1",
   "status": "原型建议，非用户确认",
   "globals": {
-    "raid_spawn_interval": 5.0,
-    "raid_spawn_batch": 6,
     "battle_spawn_interval": 4.0,
     "battle_spawn_batch": 12,
     "kill_morale_loss": 0.65,
@@ -71,7 +69,10 @@
     "capture_rate": 6.67,
     "ballista_damage": 70.0,
     "ballista_cooldown": 3.0,
-    "raid_initial_enemies": 24,
+    "ally_pursuit_radius": 8,
+    "raid_guard_radius": 10,
+    "raid_patrol_radius": 6,
+    "raid_detection_radius": 8,
     "interaction_range": 4.0,
     "supply_strike_damage": 40.0,
     "supply_attack_interval": 1.0,

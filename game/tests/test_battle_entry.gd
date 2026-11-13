@@ -75,7 +75,7 @@ func run() -> void:
 	click(game.primary_action)
 	await settle()
 	expect(not game.operating and game.battle.mode == "deploy" and game.interface_mode == "command", "mouse click opens deployment")
-	expect(game.battle.enemy_count() > 0 and game.battle.enemy_count() <= 30 and game.battle.ally_count() == 30, "raid has real enemies and 30 allies within raid caps")
+	expect(game.battle.enemy_count() == 30 and game.battle.ally_count() == 30, "raid begins with 30 guards and 30 allies")
 	var scroll: ScrollContainer = game.sidebar.get_parent()
 	scroll.scroll_vertical = 10000
 	await settle()
@@ -89,6 +89,29 @@ func run() -> void:
 	expect(game.battle.mode == "combat" and game.interface_mode == "field", "mouse click starts real-time third-person combat")
 	game._physics_process(0.1)
 	expect(game.battle.elapsed > 0, "battle simulation advances after clicking")
+	key(KEY_H)
+	await settle()
+	expect(game.wheel.is_visible_in_tree(), "H opens army commands through normal input routing")
+	expect(root.get_visible_rect().encloses(game.wheel.army_hold_button.get_global_rect()), "global hold fits smaller window")
+	click(game.wheel.army_hold_button)
+	await settle()
+	expect(game.battle.army_holding and game.interface_mode == "field", "global hold button locks army and returns to gameplay")
+	var held: Dictionary = {}
+	for agent in game.battle.agents:
+		if agent.team == "ally" and agent.alive: held[agent.id] = agent.pos
+	for frame in range(120): game._physics_process(1.0 / 60)
+	for agent in game.battle.agents:
+		if held.has(agent.id) and agent.alive:
+			expect(agent.pos.distance_to(held[agent.id]) < 0.0001, "held ally stays at its actual position")
+	key(KEY_H)
+	await settle()
+	expect(game.wheel.army_hold_button.disabled and not game.wheel.army_resume_button.disabled, "wheel exposes release for active global hold")
+	for command in game.wheel.command_buttons:
+		expect(command.disabled, "individual orders cannot silently cancel global hold")
+	await capture("v06_01_army_hold")
+	click(game.wheel.army_resume_button)
+	await settle()
+	expect(not game.battle.army_holding and game.interface_mode == "field", "resume button restores army movement")
 	print("BATTLE_ENTRY_TESTS checks=%d failures=%d" % [checks,failures])
 	game.queue_free()
 	await process_frame

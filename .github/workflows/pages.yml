@@ -29,6 +29,8 @@ jobs:
           /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 --headless --path game --editor --import --quit
           /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 --headless --path game --script res://tests/test_economy.gd
           /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 --headless --path game --script res://tests/test_battle.gd
+          /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 --headless --path game --script res://tests/test_raid_defense.gd
+          /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 --headless --path game --script res://tests/test_squad_orders.gd
           /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 --headless --path game --script res://tests/test_integration.gd
           /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 --headless --path game --script res://tests/test_battle_entry.gd
       - name: Build current browser version

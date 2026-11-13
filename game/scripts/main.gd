@@ -239,6 +239,7 @@ func _build_ui() -> void:
 	wheel = preload("res://scripts/ui/squad_wheel.gd").new()
 	root.add_child(wheel)
 	wheel.order_requested.connect(_issue_order)
+	wheel.army_order_requested.connect(_issue_army_order)
 	wheel.closed.connect(func(): _set_interface("field"))
 	wheel.hide()
 	for node in top.get_children() + bottom.get_children(): node.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -556,8 +557,17 @@ func _issue_order(slot: int, order: String) -> void:
 	if operating or battle.mode != "combat": return
 	var target: Vector2 = battle.player_pos + world.player_facing() * 12 if order == "advance" else Vector2.ZERO
 	if battle.issue_order(slot, order, target):
-		toast("第 %d 队：%s" % [slot + 1, {"follow":"跟随指挥官", "hold":"原地驻守", "advance":"向前推进"}[order]])
+		toast("第 %d 队：%s" % [slot + 1, {"follow":"跟随指挥官", "hold":"原地固守", "guard":"守卫阵位，有限追击", "advance":"向前推进"}[order]])
+	elif battle.army_holding:
+		toast("全军固守中，请先按 H 选择「全军恢复行动」。")
+		return
 	_set_interface("field")
+
+func _issue_army_order(order: String) -> void:
+	if operating or battle.mode != "combat": return
+	if not battle.issue_all_order(order): return
+	_set_interface("field")
+	toast("全军固守：停止追击，所有士兵留在当前位置。" if order == "hold" else "全军恢复行动：允许守卫、有限追击与撤离。")
 
 func _hire() -> void:
 	if not _can_manage() or selected_role == "headquarters":
@@ -757,10 +767,18 @@ func _refresh_ui() -> void:
 			labels[id].text = {"outer":"木墙", "street":"街区", "evac":"疏散门"}[id] + "   %d / 100" % bars[id].value
 		if labels.has("transport"): labels.transport.text = "本地模拟邻镇 · 运输记录 %d 车；实际扣货、延时到账。" % town.transfers.size()
 	else:
+		wheel.set_army_holding(battle.army_holding)
 		state_label.text = "战后结算" if battle.mode == "result" else ("战场暂停" if battle.mode == "deploy" else "正在交战")
 		phase_label.text = "  →  ".join(PHASES.slice(0, battle.phase + 1))
-		roster_label.text = "敌 %d/%d   友 %d/%d   士气 %.1f   生命 %.0f/%.0f" % [battle.enemy_count(), 30 if battle.phase == 0 else 100, battle.ally_count(), 30 if battle.phase == 0 else 50, battle.morale, battle.player_hp, battle.player_max_hp]
-		objective_label.text = ["突袭敌军粮草仓：固定削减 30 点士气。也可在平原迎敌，或主动撤回木墙。", "守住主门，消灭敌军士气即可获胜。城门被破后暂停，重新布置巷战防线。", "守住三个街区。敌军同时占领全部点位后进入撤离；士气归零则守城成功。", "镇已失守，护送军民通过东南小门。削尽敌军士气会停止追击。按 E 撤出指挥官。"][battle.phase]
+		if battle.army_holding and battle.mode != "result": phase_label.text += "  |  全军固守"
+		var enemy_cap: int = int(config.globals.raid_enemy_cap if battle.phase == 0 else config.globals.battle_enemy_cap)
+		roster_label.text = "敌 %d/%d   友 %d/%d   士气 %.1f   生命 %.0f/%.0f" % [battle.enemy_count(), enemy_cap, battle.ally_count(), 30 if battle.phase == 0 else 50, battle.morale, battle.player_hp, battle.player_max_hp]
+		if battle.phase == 0 and battle.mode != "result":
+			var remaining: int = ceili(battle.raid_next_reinforcement_in())
+			if remaining >= 0:
+				roster_label.text += "\n下批援军 %02d:%02d  ·  +%d 人" % [remaining / 60, remaining % 60, battle.raid_next_reinforcement_count()]
+				if battle.raid_pending_reinforcements > 0: roster_label.text += "  ·  待入场 %d" % battle.raid_pending_reinforcements
+		objective_label.text = ["主动突袭粮仓守军，破坏粮草固定削减 30 点士气。3 分钟后敌军分批增援；Q 撤回木墙。", "守住主门，消灭敌军士气即可获胜。城门被破后暂停，重新布置巷战防线。", "守住三个街区。敌军同时占领全部点位后进入撤离；士气归零则守城成功。", "镇已失守，护送军民通过东南小门。削尽敌军士气会停止追击。按 E 撤出指挥官。"][battle.phase]
 		if battle.mode == "deploy": objective_label.text = "NPC 与生产暂停。到指挥所按 E 布阵，选队并点击地图立即改位。"
 		if battle.mode == "result":
 			objective_label.text = "战斗已结束。" + ("守住了望烽镇，可返回镇务清扫、救治与修缮。" if battle.report.get("town_held", false) else "城镇失守，撤出军民和伤亡已按真实名册结算。")

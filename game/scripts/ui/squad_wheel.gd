@@ -1,10 +1,15 @@
 extends Control
 ## Five persistent squad selectors; opening this overlay never pauses simulation.
 signal order_requested(slot: int, order: String)
+signal army_order_requested(order: String)
 signal closed
 var selected: int = 0
 var title: Label
 var squad_buttons: Array[Button] = []
+var command_buttons: Array[Button] = []
+var army_hold_button: Button
+var army_resume_button: Button
+var army_holding: bool = false
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -35,24 +40,50 @@ func _ready() -> void:
 	commands.position = Vector2(-220, 200)
 	commands.add_theme_constant_override("separation", 12)
 	center.add_child(commands)
-	for entry in [["跟随我", "follow"], ["原地驻守", "hold"], ["向前推进", "advance"]]:
+	for entry in [["跟随我", "follow"], ["守卫阵位", "guard"], ["向前推进", "advance"]]:
 		var b = Button.new()
 		b.text = entry[0]
 		b.custom_minimum_size = Vector2(140, 48)
 		b.focus_mode = Control.FOCUS_NONE
 		b.pressed.connect(func(): order_requested.emit(selected, entry[1]))
 		commands.add_child(b)
+		command_buttons.append(b)
+	var army_commands = HBoxContainer.new()
+	army_commands.position = Vector2(-220, 260)
+	army_commands.add_theme_constant_override("separation", 12)
+	center.add_child(army_commands)
+	army_hold_button = Button.new()
+	army_hold_button.text = "全军固守"
+	army_hold_button.custom_minimum_size = Vector2(216, 48)
+	army_hold_button.focus_mode = Control.FOCUS_NONE
+	army_hold_button.pressed.connect(func(): army_order_requested.emit("hold"))
+	army_commands.add_child(army_hold_button)
+	army_resume_button = Button.new()
+	army_resume_button.text = "全军恢复行动"
+	army_resume_button.custom_minimum_size = Vector2(216, 48)
+	army_resume_button.focus_mode = Control.FOCUS_NONE
+	army_resume_button.pressed.connect(func(): army_order_requested.emit("guard"))
+	army_commands.add_child(army_resume_button)
 	var hint = Label.new()
-	hint.text = "1—5 选队  ·  点击下达指令  ·  H / Esc 返回\n战斗仍在继续；推进目标为指挥官前方 12 米"
-	hint.position = Vector2(-280, 265)
-	hint.size.x = 560
+	hint.text = "默认有限追击；全军固守会停止移动，也会阻止军队撤离\n1—5 选队  ·  H / Esc 返回  ·  轮盘不暂停战斗"
+	hint.position = Vector2(-320, 322)
+	hint.size.x = 640
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	center.add_child(hint)
 	select_squad(0)
+	set_army_holding(false)
+
+func set_army_holding(enabled: bool) -> void:
+	army_holding = enabled
+	if army_hold_button == null: return
+	army_hold_button.disabled = enabled
+	army_resume_button.disabled = not enabled
+	for b in command_buttons: b.disabled = enabled
+	select_squad(selected)
 
 func select_squad(index: int) -> void:
 	selected = clampi(index, 0, 4)
 	if title == null: return
-	title.text = "第 %d 队\n选择一道军令" % (selected + 1)
+	title.text = "全军固守中\n先恢复行动" if army_holding else "第 %d 队\n选择一道军令" % (selected + 1)
 	for i in range(squad_buttons.size()):
 		squad_buttons[i].modulate = Color("e8c77c") if i == selected else Color.WHITE

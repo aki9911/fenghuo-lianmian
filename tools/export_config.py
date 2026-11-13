@@ -75,14 +75,23 @@ def read_sheets(path: Path) -> dict[str, list[dict]]:
 def export(source: Path, override_path: Path, prototype: bool) -> dict:
     sheets = read_sheets(source)
     override = json.loads(override_path.read_text(encoding="utf-8")) if prototype else {}
-    missing, provenance = [], {}
+    missing, provenance, deprecated = [], {}, []
     config = {"schema_version": 1, "config_version": override.get("config_version", "0.3"),
-              "mode": "prototype" if prototype else "strict", "globals": {}, "hire": {}, "jobs": {}, "inputs": {}}
+              "mode": "prototype" if prototype else "strict", "globals": {}, "combat": {}, "hire": {}, "jobs": {}, "inputs": {}}
+    # Only absent/blank workbook fields may fall back to explicit prototype data.
+    for key, val in override.get("combat", {}).items():
+        if not ID_PATTERN.fullmatch(key):
+            raise ValueError(f"Invalid combat override ID: {key!r}")
+        config["combat"][key] = val
+        provenance[f"combat.{key}.value"] = "prototype_overrides (原型建议)"
 
     def value(row: dict, field: str, section: str, key: str, override_value=None):
         label = f"{section}.{key}.{field}"
         original = row.get(field)
         if original is None or original == "":
+            if row.get("status") == "已确认":
+                missing.append(f"{label} (confirmed Excel value is blank)")
+                return None
             if prototype and override_value is not None:
                 provenance[label] = "prototype_overrides (原型建议)"
                 return override_value
@@ -107,7 +116,15 @@ def export(source: Path, override_path: Path, prototype: bool) -> dict:
         unique(sheets[sheet], field)
     for row in sheets["全局参数"]:
         key = row["id"]
-        config["globals"][key] = value(row, "value", "globals", key, override.get("globals", {}).get(key))
+        section = row.get("section") or "globals"
+        if section == "deprecated":
+            deprecated.append(key)
+            config["combat"].pop(key, None)
+            provenance.pop(f"combat.{key}.value", None)
+            continue
+        if section not in {"globals", "combat"}:
+            raise ValueError(f"Unknown parameter section for {key}: {section!r}")
+        config[section][key] = value(row, "value", section, key, override.get(section, {}).get(key))
     for row in sheets["雇佣岗位"]:
         key = row["id"]
         config["hire"][key] = {"name": row["name"], "building_id": row["building_id"]}
@@ -157,8 +174,19 @@ def export(source: Path, override_path: Path, prototype: bool) -> dict:
         raise ValueError("Phase/roster cap mismatch")
     if g["evac_rate_intact"] < g["evac_rate_damaged"] or not 0 < g["minor_defeat_ratio"] <= 1:
         raise ValueError("Invalid evacuation settings")
+    combat = config["combat"]
+    for key, val in combat.items():
+        numeric(val, f"combat.{key}")
+    for key in ("raid_initial_enemies", "raid_reinforcement_start", "raid_reinforcement_interval",
+                "raid_wave_first", "raid_wave_second", "raid_wave_third", "raid_wave_repeat"):
+        numeric(combat.get(key), f"combat.{key}", positive=True, integer=True)
+    if combat["raid_initial_enemies"] > g["raid_enemy_cap"]:
+        raise ValueError("Initial raid enemies exceed raid in-area cap")
+    for key in ("ally_pursuit_radius", "raid_guard_radius", "raid_patrol_radius", "raid_detection_radius"):
+        if prototype:
+            numeric(combat.get(key), f"combat.{key}", positive=True)
     if prototype:
-        for key in ("initial_resources", "economy", "combat"):
+        for key in ("initial_resources", "economy"):
             config[key] = override.get(key, {})
             provenance[key] = "prototype_overrides (原型建议)"
         economy = config["economy"]
@@ -181,11 +209,7 @@ def export(source: Path, override_path: Path, prototype: bool) -> dict:
                 raise ValueError(f"Facility integrity exceeds 100: {key}")
         for key, qty in economy.get("neighbor_inventory", {}).items():
             numeric(qty, f"neighbor_inventory.{key}", integer=True)
-        for key, val in config["combat"].items():
-            numeric(val, f"combat.{key}")
-        if not config["combat"]:
-            raise ValueError("Prototype combat parameters must be explicitly configured")
-    config["provenance"] = {"source": source.name, "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(), "fields": provenance}
+    config["provenance"] = {"source": source.name, "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(), "fields": provenance, "deprecated_parameters": deprecated}
     return config
 
 

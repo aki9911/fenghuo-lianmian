@@ -77,7 +77,7 @@ func tick() -> void:
 		print("PERFORMANCE_EVAC enemies=%d allies=%d groups=%d" % [game.battle.enemy_count(),game.battle.ally_count(),game.battle.evac_groups.size()])
 	if elapsed > 30 and screen_at == 0:
 		screen_at = elapsed
-		game._qa_capture("v05_08_full_battle")
+		game._qa_capture("v06_03_full_battle")
 	if elapsed >= 60:
 		done = true
 		stats.wall_clock_seconds = elapsed
@@ -87,7 +87,7 @@ func tick() -> void:
 		stats.sections = {}
 		for id in samples:
 			stats.sections[id] = {"frame_ms":summary(samples[id]), "controller_ms":summary(costs[id])}
-		var file = FileAccess.open("res://../outputs/qa/performance_v05.json", FileAccess.WRITE)
+		var file = FileAccess.open("res://../outputs/qa/performance_v06.json", FileAccess.WRITE)
 		file.store_string(JSON.stringify(stats, "\t"))
 		print("PERFORMANCE_RESULT ", JSON.stringify(stats))
 		game.queue_free()
