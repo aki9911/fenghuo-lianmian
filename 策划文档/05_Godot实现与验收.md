@@ -33,7 +33,7 @@ v0.5 在既有经济与战斗模型上拆分玩家、相机及 NPC 控制器。`
 
 每个场景保留根节点公共 Script、`Visual` 子节点和 `CollisionShape3D`。外观替换在 `Visual` 下完成；碰撞尺寸在碰撞 Shape 资源内调整。所有实例共用相同 `.gd` 代码，但各自持有身份、状态和模板参数。中央模型负责人数及结算，个体脚本不得另外扣一次士气或另生成一套人员名册。
 
-中文字体内嵌 NotoSansSC。桌面存档使用 `user://savegame.json`，战报导出使用 `user://local_reports.json`；Web 版战报通过 JSON 下载，不能假定浏览器可写项目目录。源码仓库 `aki9911/fenghuo-lianmian` 已公开，浏览器版已部署至 https://aki9911.github.io/fenghuo-lianmian/ 。CI 构建和匿名资源访问已验证；浏览器键鼠试玩与性能尚未自动验证，详见发布说明和验证记录。
+中文字体内嵌 NotoSansSC。镇务、本地战报与累计功勋随 `user://savegame.json` 保存。v0.5.2 移除独立战报 JSON 导出按钮及下载逻辑。源码仓库 `aki9911/fenghuo-lianmian` 已公开，浏览器版已部署至 https://aki9911.github.io/fenghuo-lianmian/ 。CI 构建和匿名资源访问已验证；浏览器键鼠试玩与性能尚未自动验证，详见发布说明和验证记录。
 
 ## 目标规模
 

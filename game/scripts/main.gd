@@ -397,7 +397,6 @@ func _build_report() -> void:
 		button(sidebar, "返回镇务 · 救治与修缮", _return_town, true)
 	else:
 		button(sidebar, "建立新的试验镇", _reset_demo, true)
-	button(sidebar, "导出本机战报 JSON", _export_reports)
 
 func _physics_process(delta: float) -> void:
 	if town == null or world == null: return
@@ -704,14 +703,6 @@ func _load_save() -> void:
 	total_merit = int(data.get("merit", 0))
 	_build_sidebar()
 	toast("镇务已读取。")
-
-func _export_reports() -> void:
-	var f = FileAccess.open("user://local_reports.json", FileAccess.WRITE)
-	if f == null: return
-	f.store_string(JSON.stringify({"scope":"local_only","reports":reports,"total_merit":total_merit}, "\t"))
-	toast("战报已保存到本机用户数据目录。")
-	if OS.has_feature("web"):
-		JavaScriptBridge.download_buffer(JSON.stringify({"scope":"local_only","reports":reports,"total_merit":total_merit}, "\t").to_utf8_buffer(), "fenghuo_reports.json", "application/json")
 
 func toast(message: String) -> void:
 	if is_instance_valid(notice_label):
