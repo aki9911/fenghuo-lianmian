@@ -1,0 +1,338 @@
+{
+  "schema_version": 1,
+  "config_version": "0.3-prototype.1",
+  "mode": "prototype",
+  "globals": {
+    "residents_initial": 100,
+    "soldiers_initial": 50,
+    "soldier_roster_cap": 50,
+    "raid_enemy_cap": 30,
+    "raid_ally_cap": 30,
+    "battle_enemy_cap": 100,
+    "battle_ally_cap": 50,
+    "morale_initial": 100,
+    "morale_cap": 100,
+    "breakthrough_recover": 0.3,
+    "supply_morale_loss": 30,
+    "minor_defeat_ratio": 0.8,
+    "town_visual_actors": 15,
+    "economy_step_sec": 1,
+    "evac_visual_groups": 10,
+    "raid_spawn_interval": 5.0,
+    "raid_spawn_batch": 6,
+    "battle_spawn_interval": 4.0,
+    "battle_spawn_batch": 12,
+    "kill_morale_loss": 0.65,
+    "money_initial": 600,
+    "battle_money_grant": 180,
+    "transport_duration": 20,
+    "transport_capacity": 20,
+    "evac_rate_intact": 3.0,
+    "evac_rate_damaged": 1.0
+  },
+  "hire": {
+    "engineer": {
+      "name": "工程兵",
+      "building_id": "engineering_camp",
+      "max_workers": 20,
+      "hire_cost": 3
+    },
+    "medical": {
+      "name": "医疗队伍",
+      "building_id": "clinic",
+      "max_workers": 20,
+      "hire_cost": 3
+    },
+    "supply": {
+      "name": "军需制作",
+      "building_id": "supply_workshop",
+      "max_workers": 20,
+      "hire_cost": 3
+    },
+    "reserve": {
+      "name": "防御预备队",
+      "building_id": "reserve_camp",
+      "max_workers": 20,
+      "hire_cost": 4
+    }
+  },
+  "jobs": {
+    "gather_material": {
+      "name": "采集原料",
+      "team_id": "unhired",
+      "output_id": "material",
+      "work_required": 180,
+      "rate_per_person_sec": 1,
+      "output_qty": 5
+    },
+    "gather_herb": {
+      "name": "采集草药",
+      "team_id": "unhired",
+      "output_id": "herb_raw",
+      "work_required": 220,
+      "rate_per_person_sec": 1,
+      "output_qty": 4
+    },
+    "gather_food": {
+      "name": "采集食材",
+      "team_id": "unhired",
+      "output_id": "food_raw",
+      "work_required": 180,
+      "rate_per_person_sec": 1,
+      "output_qty": 5
+    },
+    "craft_equipment": {
+      "name": "制作装备",
+      "team_id": "supply",
+      "output_id": "equipment",
+      "work_required": 120,
+      "rate_per_person_sec": 1,
+      "output_qty": 5
+    },
+    "prepare_medicine": {
+      "name": "草药整理",
+      "team_id": "supply",
+      "output_id": "medicine",
+      "work_required": 80,
+      "rate_per_person_sec": 1,
+      "output_qty": 5
+    },
+    "craft_engine": {
+      "name": "制作器械",
+      "team_id": "supply",
+      "output_id": "siege_engine",
+      "work_required": 200,
+      "rate_per_person_sec": 1,
+      "output_qty": 1
+    },
+    "cook_rations": {
+      "name": "制作军粮",
+      "team_id": "supply",
+      "output_id": "rations",
+      "work_required": 80,
+      "rate_per_person_sec": 1,
+      "output_qty": 10
+    },
+    "repair_outer": {
+      "name": "修缮城外与木墙",
+      "team_id": "engineer",
+      "output_id": "wall_hp",
+      "work_required": 100,
+      "rate_per_person_sec": 1,
+      "output_qty": 10
+    },
+    "repair_street": {
+      "name": "修缮街区",
+      "team_id": "engineer",
+      "output_id": "street_hp",
+      "work_required": 100,
+      "rate_per_person_sec": 1,
+      "output_qty": 10
+    },
+    "repair_evac": {
+      "name": "修缮疏散门",
+      "team_id": "engineer",
+      "output_id": "evac_hp",
+      "work_required": 100,
+      "rate_per_person_sec": 1,
+      "output_qty": 10
+    },
+    "heal_wounded": {
+      "name": "伤员治疗",
+      "team_id": "medical",
+      "output_id": "healed_person",
+      "work_required": 80,
+      "rate_per_person_sec": 1,
+      "output_qty": 5
+    },
+    "salvage_field": {
+      "name": "战场清扫",
+      "team_id": "engineer",
+      "output_id": "salvage_unit",
+      "work_required": 60,
+      "rate_per_person_sec": 1,
+      "output_qty": 5
+    }
+  },
+  "inputs": {
+    "craft_equipment": {
+      "material": 5
+    },
+    "prepare_medicine": {
+      "herb_raw": 5
+    },
+    "craft_engine": {
+      "material": 15
+    },
+    "cook_rations": {
+      "food_raw": 5
+    },
+    "repair_outer": {
+      "material": 5
+    },
+    "repair_street": {
+      "material": 5
+    },
+    "repair_evac": {
+      "material": 5
+    },
+    "heal_wounded": {
+      "medicine": 5
+    }
+  },
+  "initial_resources": {
+    "material": 80,
+    "herb_raw": 30,
+    "food_raw": 40,
+    "equipment": 20,
+    "medicine": 15,
+    "siege_engine": 2,
+    "rations": 30
+  },
+  "economy": {
+    "initial_equipped": 30,
+    "warehouse_capacity": 500,
+    "initial_facilities": {
+      "outer": 70,
+      "street": 65,
+      "evac": 50
+    },
+    "neighbor_inventory": {
+      "material": 100,
+      "medicine": 20,
+      "rations": 40
+    },
+    "neighbor_gift_item": "medicine",
+    "neighbor_gift_amount": 10
+  },
+  "combat": {
+    "player_max_hp": 250.0,
+    "player_damage": 28.0,
+    "player_attack_range": 4.0,
+    "player_attack_cooldown": 0.45,
+    "enemy_hp": 45.0,
+    "ally_hp": 90.0,
+    "enemy_damage": 5.0,
+    "ally_damage": 10.0,
+    "enemy_speed": 2.4,
+    "ally_speed": 3.0,
+    "supply_hp": 120.0,
+    "gate_base_hp": 800.0,
+    "capture_rate": 6.67,
+    "ballista_damage": 70.0,
+    "ballista_cooldown": 3.0,
+    "raid_initial_enemies": 24,
+    "interaction_range": 4.0,
+    "supply_strike_damage": 40.0,
+    "supply_attack_interval": 1.0,
+    "melee_range": 1.8,
+    "ranged_range": 10.0,
+    "enemy_ranged_range": 7.5,
+    "ally_attack_interval": 2.4,
+    "enemy_attack_interval": 2.8,
+    "unequipped_damage_factor": 0.45,
+    "gate_damage": 2.0,
+    "gate_attack_interval": 4.0,
+    "front_capture_rate": 3.0,
+    "capture_radius": 3.0,
+    "ballista_limit": 2,
+    "ballista_range": 26.0,
+    "ballista_radius": 3.0,
+    "civilian_attack_interval": 7.0,
+    "evac_speed": 0.75,
+    "ration_phase_cost": 10,
+    "unfed_damage_factor": 0.8,
+    "street_defense_factor": 0.5,
+    "merit_per_kill": 1,
+    "merit_supply": 20,
+    "merit_victory": 50,
+    "merit_per_escape": 1
+  },
+  "provenance": {
+    "source": "烽火连绵_数值配置_v0.3.xlsx",
+    "source_sha256": "9a2c9f50119ef8e3f162f9d8f9a4e27468e3e3f82f01a6f1d48b3fdfd17099f3",
+    "fields": {
+      "globals.residents_initial.value": "xlsx (已确认)",
+      "globals.soldiers_initial.value": "xlsx (已确认)",
+      "globals.soldier_roster_cap.value": "xlsx (已确认)",
+      "globals.raid_enemy_cap.value": "xlsx (已确认)",
+      "globals.raid_ally_cap.value": "xlsx (已确认)",
+      "globals.battle_enemy_cap.value": "xlsx (已确认)",
+      "globals.battle_ally_cap.value": "xlsx (已确认)",
+      "globals.morale_initial.value": "xlsx (已确认)",
+      "globals.morale_cap.value": "xlsx (原型建议)",
+      "globals.breakthrough_recover.value": "xlsx (已确认)",
+      "globals.supply_morale_loss.value": "xlsx (已确认)",
+      "globals.minor_defeat_ratio.value": "xlsx (原型建议)",
+      "globals.town_visual_actors.value": "xlsx (原型建议)",
+      "globals.economy_step_sec.value": "xlsx (原型建议)",
+      "globals.evac_visual_groups.value": "xlsx (原型建议)",
+      "globals.raid_spawn_interval.value": "prototype_overrides (原型建议)",
+      "globals.raid_spawn_batch.value": "prototype_overrides (原型建议)",
+      "globals.battle_spawn_interval.value": "prototype_overrides (原型建议)",
+      "globals.battle_spawn_batch.value": "prototype_overrides (原型建议)",
+      "globals.kill_morale_loss.value": "prototype_overrides (原型建议)",
+      "globals.money_initial.value": "prototype_overrides (原型建议)",
+      "globals.battle_money_grant.value": "prototype_overrides (原型建议)",
+      "globals.transport_duration.value": "prototype_overrides (原型建议)",
+      "globals.transport_capacity.value": "prototype_overrides (原型建议)",
+      "globals.evac_rate_intact.value": "prototype_overrides (原型建议)",
+      "globals.evac_rate_damaged.value": "prototype_overrides (原型建议)",
+      "hire.engineer.max_workers": "xlsx (待定)",
+      "hire.engineer.hire_cost": "prototype_overrides (原型建议)",
+      "hire.medical.max_workers": "xlsx (待定)",
+      "hire.medical.hire_cost": "prototype_overrides (原型建议)",
+      "hire.supply.max_workers": "xlsx (待定)",
+      "hire.supply.hire_cost": "prototype_overrides (原型建议)",
+      "hire.reserve.max_workers": "xlsx (待定)",
+      "hire.reserve.hire_cost": "prototype_overrides (原型建议)",
+      "jobs.gather_material.work_required": "prototype_overrides (原型建议)",
+      "jobs.gather_material.rate_per_person_sec": "prototype_overrides (原型建议)",
+      "jobs.gather_material.output_qty": "prototype_overrides (原型建议)",
+      "jobs.gather_herb.work_required": "prototype_overrides (原型建议)",
+      "jobs.gather_herb.rate_per_person_sec": "prototype_overrides (原型建议)",
+      "jobs.gather_herb.output_qty": "prototype_overrides (原型建议)",
+      "jobs.gather_food.work_required": "prototype_overrides (原型建议)",
+      "jobs.gather_food.rate_per_person_sec": "prototype_overrides (原型建议)",
+      "jobs.gather_food.output_qty": "prototype_overrides (原型建议)",
+      "jobs.craft_equipment.work_required": "prototype_overrides (原型建议)",
+      "jobs.craft_equipment.rate_per_person_sec": "prototype_overrides (原型建议)",
+      "jobs.craft_equipment.output_qty": "prototype_overrides (原型建议)",
+      "jobs.prepare_medicine.work_required": "prototype_overrides (原型建议)",
+      "jobs.prepare_medicine.rate_per_person_sec": "prototype_overrides (原型建议)",
+      "jobs.prepare_medicine.output_qty": "prototype_overrides (原型建议)",
+      "jobs.craft_engine.work_required": "prototype_overrides (原型建议)",
+      "jobs.craft_engine.rate_per_person_sec": "prototype_overrides (原型建议)",
+      "jobs.craft_engine.output_qty": "prototype_overrides (原型建议)",
+      "jobs.cook_rations.work_required": "prototype_overrides (原型建议)",
+      "jobs.cook_rations.rate_per_person_sec": "prototype_overrides (原型建议)",
+      "jobs.cook_rations.output_qty": "prototype_overrides (原型建议)",
+      "jobs.repair_outer.work_required": "prototype_overrides (原型建议)",
+      "jobs.repair_outer.rate_per_person_sec": "prototype_overrides (原型建议)",
+      "jobs.repair_outer.output_qty": "prototype_overrides (原型建议)",
+      "jobs.repair_street.work_required": "prototype_overrides (原型建议)",
+      "jobs.repair_street.rate_per_person_sec": "prototype_overrides (原型建议)",
+      "jobs.repair_street.output_qty": "prototype_overrides (原型建议)",
+      "jobs.repair_evac.work_required": "prototype_overrides (原型建议)",
+      "jobs.repair_evac.rate_per_person_sec": "prototype_overrides (原型建议)",
+      "jobs.repair_evac.output_qty": "prototype_overrides (原型建议)",
+      "jobs.heal_wounded.work_required": "prototype_overrides (原型建议)",
+      "jobs.heal_wounded.rate_per_person_sec": "prototype_overrides (原型建议)",
+      "jobs.heal_wounded.output_qty": "prototype_overrides (原型建议)",
+      "jobs.salvage_field.work_required": "prototype_overrides (原型建议)",
+      "jobs.salvage_field.rate_per_person_sec": "prototype_overrides (原型建议)",
+      "jobs.salvage_field.output_qty": "prototype_overrides (原型建议)",
+      "inputs.craft_equipment.material.qty_per_batch": "prototype_overrides (原型建议)",
+      "inputs.prepare_medicine.herb_raw.qty_per_batch": "prototype_overrides (原型建议)",
+      "inputs.craft_engine.material.qty_per_batch": "prototype_overrides (原型建议)",
+      "inputs.cook_rations.food_raw.qty_per_batch": "prototype_overrides (原型建议)",
+      "inputs.repair_outer.material.qty_per_batch": "prototype_overrides (原型建议)",
+      "inputs.repair_street.material.qty_per_batch": "prototype_overrides (原型建议)",
+      "inputs.repair_evac.material.qty_per_batch": "prototype_overrides (原型建议)",
+      "inputs.heal_wounded.medicine.qty_per_batch": "prototype_overrides (原型建议)",
+      "initial_resources": "prototype_overrides (原型建议)",
+      "economy": "prototype_overrides (原型建议)",
+      "combat": "prototype_overrides (原型建议)"
+    }
+  }
+}

@@ -1,0 +1,22 @@
+[gd_scene format=3]
+[ext_resource type="Script" path="res://scripts/actors/npc_controller.gd" id="controller"]
+[ext_resource type="PackedScene" path="res://scenes/actors/humanoid_visual.tscn" id="visual"]
+[sub_resource type="CapsuleShape3D" id="capsule"]
+radius = 0.3
+height = 1.8
+[sub_resource type="StandardMaterial3D" id="cloth"]
+albedo_color = Color(0.42, 0.73, 0.7, 1)
+roughness = 0.92
+[node name="ally_soldier" type="CharacterBody3D"]
+collision_layer = 2
+collision_mask = 3
+safe_margin = 0.002
+script = ExtResource("controller")
+template_id = "ally_soldier"
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+position = Vector3(0, 0.9, 0)
+shape = SubResource("capsule")
+[node name="Visual" parent="." instance=ExtResource("visual")]
+[node name="Body" parent="Visual" index="0"]
+material_override = SubResource("cloth")
+[editable path="Visual"]

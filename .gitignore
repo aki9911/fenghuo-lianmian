@@ -1,0 +1,5 @@
+game/.godot/
+.runtime/
+*.log
+*.tmp
+.DS_Store

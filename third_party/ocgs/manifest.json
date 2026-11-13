@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "repository": "https://github.com/striderZA/OpenCodeGameStudios",
+  "commit": "0ac3a5584bb8b86046d3a040508bf513c93ccf6b",
+  "retrieved_on": "2026-11-09",
+  "license": "MIT",
+  "reference_only": true,
+  "files": [
+    {
+      "source_path": "LICENSE",
+      "local_path": "reference/LICENSE",
+      "sha256": "1281ffedda7559df1a4b2c4f64a23920a839bdf4832558c846a2020b937167d5",
+      "bytes": 1078
+    },
+    {
+      "source_path": "README.md",
+      "local_path": "reference/README.md",
+      "sha256": "5878539ffe3682f3b84e5c77fbb03153c37e3412d95a9378a03228748849519c",
+      "bytes": 18641
+    },
+    {
+      "source_path": "docs/framework/coordination-rules.md",
+      "local_path": "reference/docs/framework/coordination-rules.md",
+      "sha256": "c475c7256188ded2492ea8025b6d852976b371f37f2df646b46c383646424759",
+      "bytes": 2339
+    },
+    {
+      "source_path": "docs/hybrid-workflow.md",
+      "local_path": "reference/docs/hybrid-workflow.md",
+      "sha256": "7ed7c9be922fc0761e087cc93b2dd807a7fd4a4c31d19d7cc7cb9d894fa79666",
+      "bytes": 10177
+    },
+    {
+      "source_path": ".agents/skills/review-all-gdds/SKILL.md",
+      "local_path": "reference/agent-library/skills/review-all-gdds/SKILL.md",
+      "sha256": "9594c3f560db12cc541c78ae789230adab3d9fb1cb56acaa8fca681674946ca7",
+      "bytes": 26165
+    },
+    {
+      "source_path": ".agents/skills/consistency-check/SKILL.md",
+      "local_path": "reference/agent-library/skills/consistency-check/SKILL.md",
+      "sha256": "e16448cd8ffad47a382e28bcb5f750b47851e754d2bc22ee82946c76703058d0",
+      "bytes": 9666
+    },
+    {
+      "source_path": ".agents/skills/propagate-design-change/SKILL.md",
+      "local_path": "reference/agent-library/skills/propagate-design-change/SKILL.md",
+      "sha256": "e0145ee67521eaf89de6be67dee333fef1bf7c276d9085f3b6187738bfd7a067",
+      "bytes": 7826
+    },
+    {
+      "source_path": ".agents/skills/scope-check/SKILL.md",
+      "local_path": "reference/agent-library/skills/scope-check/SKILL.md",
+      "sha256": "d91631b2b6768a3a7ab17ddfc2499af4289cad58483f9c4d4b62c1aefac9a337",
+      "bytes": 4313
+    },
+    {
+      "source_path": ".agents/skills/hybrid-prototype/SKILL.md",
+      "local_path": "reference/agent-library/skills/hybrid-prototype/SKILL.md",
+      "sha256": "8c2345d90e467e32ee10bc090e276c3af1bd4625f7f323b407aaa3475284340d",
+      "bytes": 5130
+    },
+    {
+      "source_path": ".agents/skills/perf-profile/SKILL.md",
+      "local_path": "reference/agent-library/skills/perf-profile/SKILL.md",
+      "sha256": "2f94c7692c4fa29cc688fbd25eb61c41efbd45671a1476fa5af55ca3dcf6b670",
+      "bytes": 4093
+    },
+    {
+      "source_path": ".agents/agents/godot-specialist.md",
+      "local_path": "reference/agent-library/agents/godot-specialist.md",
+      "sha256": "45927f40a79cb4f02f9f234f71d2e2128411a6f99239e7f7620422a5ca366c22",
+      "bytes": 9778
+    },
+    {
+      "source_path": ".agents/agents/godot-gdscript-specialist.md",
+      "local_path": "reference/agent-library/agents/godot-gdscript-specialist.md",
+      "sha256": "b56c7df780413019916c09b2edeb6e5ec9fd835ab29e8417781644ed0c0b7527",
+      "bytes": 12593
+    },
+    {
+      "source_path": ".agents/agents/economy-designer.md",
+      "local_path": "reference/agent-library/agents/economy-designer.md",
+      "sha256": "066b89b2f8e3603e5b492c69da55b1e63e905937c2f26d8dec2341ffcbf38a0a",
+      "bytes": 6538
+    },
+    {
+      "source_path": ".agents/agents/level-designer.md",
+      "local_path": "reference/agent-library/agents/level-designer.md",
+      "sha256": "94007ec092d3d9d91ba2270250f05bb1be9df74719f7fc6d849ec102180d612b",
+      "bytes": 5089
+    },
+    {
+      "source_path": ".agents/agents/live-ops-designer.md",
+      "local_path": "reference/agent-library/agents/live-ops-designer.md",
+      "sha256": "e5c81d5b6490f0cf2e685f9574a5bc9f6435eefaf8630d3bd01a34169295e402",
+      "bytes": 10063
+    }
+  ]
+}
