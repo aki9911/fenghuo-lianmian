@@ -29,6 +29,8 @@ jobs:
           /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 --headless --path game --editor --import --quit
           /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 --headless --path game --script res://tests/test_economy.gd
           /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 --headless --path game --script res://tests/test_battle.gd
+          /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 --headless --path game --script res://tests/test_integration.gd
+          /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 --headless --path game --script res://tests/test_battle_entry.gd
       - name: Build current browser version
         run: /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 --headless --path game --export-release Web "$GITHUB_WORKSPACE/web/game.html"
       - uses: actions/upload-pages-artifact@v3

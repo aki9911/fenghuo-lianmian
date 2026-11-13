@@ -21,7 +21,7 @@ func find_button(node: Node, title: String):
 	return null
 
 func press(title: String) -> void:
-	var b = find_button(game.sidebar, title)
+	var b = find_button(game.sidebar_panel, title)
 	expect(b != null, "context button: " + title)
 	if b != null: b.pressed.emit()
 

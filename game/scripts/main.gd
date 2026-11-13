@@ -21,6 +21,9 @@ var town_pos = Vector2(0, 12)
 var walk_target = Vector2.INF
 var interface_mode: String = "field"
 var sidebar_panel: PanelContainer
+var primary_action: Button
+var battle_guide: PanelContainer
+var battle_guide_text: Label
 var wheel: Control
 var crosshair: Label
 var interaction_hint: Label
@@ -151,7 +154,7 @@ func _build_ui() -> void:
 	add_child(root)
 	var font = FontVariation.new()
 	font.base_font = preload("res://assets/fonts/NotoSansSC.ttf")
-	font.variation_opentype = {"wght": 500}
+	font.variation_opentype = {TextServerManager.get_primary_interface().name_to_tag("wght"): 500}
 	var theme = Theme.new()
 	theme.default_font = font
 	theme.default_font_size = 15
@@ -178,6 +181,20 @@ func _build_ui() -> void:
 	phase_label = text_node(top, "", 16, PAPER)
 	roster_label = text_node(top, "", 14, PAPER)
 	resource_label = text_node(top, "", 13, GOLD)
+	battle_guide = PanelContainer.new()
+	battle_guide.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	battle_guide.offset_left = -400
+	battle_guide.offset_right = -20
+	battle_guide.offset_top = 24
+	battle_guide.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	battle_guide.add_theme_stylebox_override("panel", style(Color(0.07, 0.12, 0.14, 0.95), GOLD))
+	root.add_child(battle_guide)
+	var guide_content = VBoxContainer.new()
+	guide_content.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	battle_guide.add_child(guide_content)
+	text_node(guide_content, "迎敌指引", 22, GOLD).mouse_filter = Control.MOUSE_FILTER_IGNORE
+	battle_guide_text = paragraph(guide_content, "", 17, PAPER)
+	battle_guide_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	sidebar_panel = PanelContainer.new()
 	sidebar_panel.set_anchors_and_offsets_preset(Control.PRESET_RIGHT_WIDE)
 	sidebar_panel.offset_left = -400
@@ -186,9 +203,17 @@ func _build_ui() -> void:
 	sidebar_panel.offset_bottom = -110
 	sidebar_panel.add_theme_stylebox_override("panel", style(Color(0.07, 0.12, 0.14, 0.96), Color("445d58")))
 	root.add_child(sidebar_panel)
+	var sidebar_layout = VBoxContainer.new()
+	sidebar_layout.add_theme_constant_override("separation", 12)
+	sidebar_panel.add_child(sidebar_layout)
+	primary_action = button(sidebar_layout, "", _primary_action, true)
+	primary_action.custom_minimum_size.y = 54
+	primary_action.add_theme_font_size_override("font_size", 18)
+	primary_action.hide()
 	var scroll = ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	sidebar_panel.add_child(scroll)
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	sidebar_layout.add_child(scroll)
 	sidebar = VBoxContainer.new()
 	sidebar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	sidebar.add_theme_constant_override("separation", 9)
@@ -236,6 +261,8 @@ func _build_sidebar() -> void:
 	labels.clear()
 	bars.clear()
 	hire_button = null
+	primary_action.visible = (operating and interface_mode == "building" and selected_role == "headquarters") or (not operating and interface_mode == "command" and battle.mode == "deploy")
+	primary_action.text = "迎战来敌  →  暂停布阵" if operating else "确认布阵 · 开始交战"
 	if interface_mode == "report":
 		_build_report()
 	elif interface_mode == "map":
@@ -258,8 +285,10 @@ func _build_sidebar() -> void:
 func _build_overview() -> void:
 	text_node(sidebar, "望烽镇 · 总览", 23, GOLD)
 	paragraph(sidebar, "选择建筑查看位置，走近入口按 E 办理镇务。M 返回第三人称。", 15, PAPER)
+	button(sidebar, "指挥所 · 迎敌 / 布阵", _visit_building.bind("headquarters"), true)
 	labels.population = paragraph(sidebar, "", 14)
 	for building in world.get_building_definitions():
+		if building.id == "headquarters": continue
 		button(sidebar, building.name, _visit_building.bind(building.id))
 	if operating:
 		for id in ["outer", "street", "evac"]: meter(sidebar, id, id)
@@ -275,7 +304,6 @@ func _build_operations() -> void:
 	if selected_role == "headquarters":
 		text_node(sidebar, "指挥所", 22, GOLD)
 		labels.population = paragraph(sidebar, "", 14, PAPER)
-		button(sidebar, "迎战来敌  →  暂停布阵", _begin_battle, true)
 		button(sidebar, "分发装备", _equip)
 		paragraph(sidebar, "在此接敌后打开战场布阵。阶段之间暂停；到指挥所重新部署。")
 		return
@@ -332,7 +360,6 @@ func _build_battle() -> void:
 		button(deploy_row, "预备队补员", _reinforce)
 		button(sidebar, "布置床弩（消耗 1 器械）", _deploy_ballista)
 		paragraph(sidebar, "军粮支持本场出战；修好的木墙、街区和小门将直接改变防守与撤离能力。", 13)
-		button(sidebar, "确认布阵 · 开始交战", _start_combat, true)
 	else:
 		if battle.phase == 0:
 			meter(sidebar, "supply", "敌军粮草", GOLD)
@@ -504,6 +531,10 @@ func _near_building() -> bool:
 
 func _can_manage() -> bool:
 	return operating and interface_mode == "building" and _near_building()
+
+func _primary_action() -> void:
+	if operating: _begin_battle()
+	else: _start_combat()
 
 func _assign_job(role: String, job: String) -> void:
 	if not _can_manage(): return
@@ -692,16 +723,32 @@ func _refresh_ui() -> void:
 	for item in ITEMS:
 		info += "    ·    %s  %d" % [ITEMS[item], int(town.resources.get(item, 0))]
 	resource_label.text = info
+	battle_guide.visible = interface_mode == "field" and (operating or battle.mode == "deploy")
+	if battle_guide.visible:
+		var p: Vector2 = town_pos if operating else battle.player_pos
+		for building in world.get_building_definitions():
+			if building.id != "headquarters": continue
+			var target: Vector2 = building.pos - p
+			var facing: Vector2 = world.player_facing()
+			var right = Vector2(-facing.y, facing.x)
+			var bearing: int = posmod(roundi(atan2(target.dot(right), target.dot(facing)) / (PI / 4)), 8)
+			var direction: String = ["前方", "右前方", "右侧", "右后方", "身后", "左后方", "左侧", "左前方"][bearing]
+			if target.length() <= 3.4:
+				battle_guide_text.text = "已到指挥所入口 · 按 E 打开\n" + ("点击「迎战来敌」，进入战前布阵。" if operating else "布阵后点击「确认布阵 · 开始交战」。")
+			else:
+				battle_guide_text.text = "指挥所：%s · %.0f 米\n走近入口按 E，再选择迎敌。\n按 M 查看指挥所位置。" % [direction, target.length()]
+			break
+	if primary_action.visible: primary_action.disabled = not _near_building()
 	interaction_hint.text = ""
 	if interface_mode == "field":
 		if operating or battle.mode == "deploy":
 			var near: Dictionary = _nearest_building()
-			if not near.is_empty(): interaction_hint.text = "[E] " + near.name
+			if not near.is_empty(): interaction_hint.text = "[E] " + near.name + (" · 迎敌 / 布阵" if near.id == "headquarters" else "")
 		elif battle.mode == "combat":
 			interaction_hint.text = "[E] 附近目标 / 器械   [H] 小队军令"
 	if operating:
 		state_label.text = "烽火连绵  ·  镇务运行中"
-		phase_label.text = "望烽镇   /   实时筹备"
+		phase_label.text = "望烽镇   /   实时筹备 · v" + str(ProjectSettings.get_setting("application/config/version", "0.5.1"))
 		objective_label.text = "雇佣 → 采集与制作 → 修缮与布防 → 接敌。所有作业按实际经过的时间推进。"
 		roster_label.text = "  运营表现：15 人 / 实际人口：%d" % (town.resident_count() + town.soldier_count())
 		if labels.has("population"): labels.population.text = "居民 %d   ·   军人 %d / 50   ·   自由居民 %d\n已装备 %d 人   ·   待清扫 %d 份" % [town.resident_count(), town.soldier_count(), town.count_role("unhired"), town.equipped_count(), town.salvage]
