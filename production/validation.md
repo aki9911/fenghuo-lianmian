@@ -8,7 +8,11 @@
 
 已使用官方单线程 Web 模板导出 `publish/fenghuo-lianmian/web/game.html`、WASM 与 PCK；中文字体内嵌。导出日志无 ERROR、SCRIPT ERROR 或 Safe save failed。发布目录使用独立仓库，只复制游戏、策划和公开介绍；不包含 MCP 编辑器控制插件、私人简历、账号配置与开发存档。网页首屏约需加载 53MB 资源。
 
-网络网页部署与实际浏览器运行验证尚待完成；Windows 和本机 3D 测试结果不视为浏览器验证结果。
+GitHub Actions 首次自动构建与部署成功：[运行 43359494183](https://github.com/aki9911/fenghuo-lianmian/actions/runs/43359494183)，发布源码提交 `521360f85c68975ad049132e80ee32f377d5fc7c`。Linux CI 实际执行了导入、运营/战斗测试及 Web 导出。
+
+公开地址：https://aki9911.github.io/fenghuo-lianmian/ 。匿名 HTTP 检查首页、game.html、game.js、game.wasm、game.pck 全部返回 200；WASM 为 application/wasm。记录位于 `outputs/qa/pages_http.json`。最后一次原生 UI 运行也已完成，7 张 v05 截图均成功，军令轮盘已实际截取。
+
+本次浏览器控制连续超时，未能自动完成网页内键鼠试玩；原生 Windows 和本机 3D 测试结果不视为浏览器运行/性能验证结果。
 
 ## 2026-11-12 编辑器可见性修复
 

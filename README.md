@@ -4,7 +4,7 @@ Godot 4.7.2 第三人称 PvE 可玩灰盒，贺思棋个人系统策划与 AI �
 
 ## 浏览器试玩
 
-发布目标：**https://aki9911.github.io/fenghuo-lianmian/**。首次部署成功后开放，部署状态见 [Actions](https://github.com/aki9911/fenghuo-lianmian/actions)。
+**[在线试玩](https://aki9911.github.io/fenghuo-lianmian/)** · [直接进入游戏](https://aki9911.github.io/fenghuo-lianmian/game.html)。已完成首次部署，后续部署状态见 [Actions](https://github.com/aki9911/fenghuo-lianmian/actions)。
 
 桌面键鼠操作，浏览器需支持 WebGL 2。无需安装 Godot 或下载可执行程序；首次加载约 53 MB 游戏资源。
 
